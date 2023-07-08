@@ -1,11 +1,13 @@
 import { provideClass, resolveClass } from "./context";
+import { Constructor } from "./types";
 
-type Constructor<T = {}> = new (...args: any[]) => T;
+
 
 export const Bean =
   <Class extends Constructor>(name?: string) =>
   (clz: Class, _context: ClassDecoratorContext) => {
-    provideClass(name ?? clz.name, clz);
+    const token = name ?? clz.name
+    provideClass<Class, typeof token>(token, clz);
     return clz;
   };
 

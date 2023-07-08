@@ -1,10 +1,15 @@
-import { Injector, createInjector } from "typed-inject";
+import {
+  Injector,
+  createInjector,
+} from "typed-inject";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { Constructor } from "./types";
 
-type Container = {
+type Container<TContext = {}> = {
   registery: Map<string, string>;
-  injector: Injector;
+  injector: Injector<TContext>;
 };
+
 const containMap: Map<string, Container> = new Map();
 const asyncLocalStorage = new AsyncLocalStorage<{ profile: string }>();
 
@@ -26,11 +31,9 @@ const updateContext = (profile: string, ctx: Container) => {
 export const resolveClass = <T>(name: string) => {
   try {
     const profile = getProfile();
-    //@ts-ignore
-    return getContainer(profile).injector.resolve(name) as T;
+    return getContainer(profile).injector.resolve(name as never) as T;
   } catch (err) {
-    //@ts-ignore
-    return getContainer("default").injector.resolve(name) as T;
+    return getContainer("default").injector.resolve(name as never) as T;
   }
 };
 
@@ -39,7 +42,10 @@ const getProfile = () => {
   return store?.profile ?? "default";
 };
 
-export const provideClass = (name: string, Clz: any) => {
+export const provideClass = <Class extends Constructor, Token extends string>(
+  name: Token,
+  Clz: Class
+) => {
   const profile = getProfile();
   const container = getContainer(profile);
   if (container.registery.has(name)) {
@@ -47,8 +53,8 @@ export const provideClass = (name: string, Clz: any) => {
   } else {
     container.registery.set(name, profile);
   }
-  const inj = container.injector.provideClass(name, Clz);
-  container.injector = inj;
+  const injector = container.injector;
+  container.injector = injector.provideClass(name, Clz);
   updateContext(profile, container);
 };
 
